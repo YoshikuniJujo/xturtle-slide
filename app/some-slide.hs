@@ -10,4 +10,4 @@ main :: IO ()
 main = runSlide version someSlide
 
 someSlide :: Slide
-someSlide = (text "hoge" :| []) :| []
+someSlide = (writeTitle "hoge" "hige" :| []) :| []

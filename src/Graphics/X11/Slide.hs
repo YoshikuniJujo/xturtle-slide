@@ -2,7 +2,7 @@
 
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
-	runSlide, text
+	runSlide, writeTitle, text
 	) where
 
 import Control.Applicative
@@ -154,6 +154,19 @@ height = cvt 375
 
 fontName :: String
 fontName = "KochiGothic"
+
+writeTitle :: String -> String -> Line
+writeTitle ttl sttl = do
+	t <- asks bodyTurtle
+	w <- width
+	h <- height
+	dw <- cvt 20
+	liftIO $ do
+		hideturtle t
+		speed t "fastest"
+		goto t ((w - dw * fromIntegral (length ttl)) / 2) (h / 2)
+		write t fontName dw ttl
+		speed t "slow"
 
 text :: String -> Line
 text tx = do
