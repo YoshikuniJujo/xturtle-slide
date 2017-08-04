@@ -1,12 +1,14 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Graphics.X11.Slide (
-	Version,
-	runSlide
+	Version, Slide, Page, Line,
+	runSlide, text
 	) where
 
 import Control.Applicative
-import Control.Monad.Trans (lift)
-import Control.Monad.Reader (ReaderT(..))
-import Control.Monad.State (StateT(..), put)
+import Control.Monad.Trans (lift, liftIO)
+import Control.Monad.Reader (ReaderT(..), runReaderT, asks)
+import Control.Monad.State (StateT(..), evalStateT, gets)
 import Control.Concurrent
 import Data.Maybe
 import Data.List
@@ -19,14 +21,16 @@ import Graphics.X11.Slide.Options
 
 import qualified Data.List.NonEmpty as NE
 
-runSlide :: Version -> IO ()
-runSlide v = do
+runSlide :: Version -> Slide -> IO ()
+runSlide v sld = do
 	pn <- getProgName
 	os <- getOptions
 	st <- (mconcat <$>) $ sequence . map snd . sortBy (compare `on` fst)
 		. map (getAction pn v) $ fst os
 	print st
-	return ()
+	sttc <- makeStatic st sld
+	let	stte = makeState st sld
+	runSlideS sld `runReaderT` sttc `evalStateT` stte
 
 data Setting = Setting {
 	stRatio :: Maybe Double,
@@ -74,6 +78,7 @@ type SlideM = ReaderT Static (StateT State IO)
 
 data Static = Static {
 	ratio :: Double,
+	slideField :: Field,
 	pageTurtle :: Turtle,
 	bodyTurtle :: Turtle,
 	allPages :: Int,
@@ -109,6 +114,7 @@ makeStatic st sld = do
 	e <- newChan
 	return $ Static {
 		ratio = fromMaybe 1 $ stRatio st,
+		slideField = fld,
 		pageTurtle = p,
 		bodyTurtle = t,
 		allPages = NE.length sld,
@@ -116,11 +122,50 @@ makeStatic st sld = do
 		end = e,
 		svgPrefix = stSvgPrefix st }
 
-initState :: Setting -> Slide -> SlideM ()
-initState st sld = lift $ put State {
+makeState :: Setting -> Slide -> State
+makeState st sld =  State {
 	pageNumber = fromMaybe 1 $ stBeginWith st,
 	pageZipper = Zipper [] sld,
 	pageEnd = False,
 	allEnd = False,
 	needEnd = 0,
 	runTurtle = True }
+
+tstFstLine :: Slide -> Line
+tstFstLine ((l :| _) :| _) = l
+
+runSlideS :: Slide -> SlideM ()
+runSlideS sld = do
+	tstFstLine sld
+	fld <- asks slideField
+	liftIO $ do
+		onkeypress fld $ \case
+			'q' -> return False
+			_ -> return True
+		waitField fld
+
+
+cvt :: Double -> SlideM Double
+cvt x = asks $ (x *) . ratio
+
+width, height :: SlideM Double
+width = cvt 512
+height = cvt 375
+
+fontName :: String
+fontName = "KochiGothic"
+
+text :: String -> Line
+text tx = do
+	t <- asks bodyTurtle
+	w <- width
+	rt <- lift $ gets runTurtle
+	fs <- cvt 13
+	liftIO $ do
+		sety t 100
+		setx t $ w / 8
+		setheading t 0
+		write t fontName fs tx
+
+-- sitext :: Double -> Double -> String -> Line
+-- sitext s i tx st = do
