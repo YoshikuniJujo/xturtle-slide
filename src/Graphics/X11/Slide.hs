@@ -9,7 +9,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans (lift, liftIO)
 import Control.Monad.Reader (ReaderT(..), runReaderT, asks)
-import Control.Monad.State (StateT(..), evalStateT, get, gets, put)
+import Control.Monad.State (StateT(..), evalStateT, get, gets, put, modify)
 import Control.Concurrent
 import Data.Maybe
 import Data.List
@@ -113,7 +113,9 @@ nextPage :: SlideM Bool
 nextPage = do
 	s <- get
 	case nextZipper $ pageZipper s of
-		(c, Just z') -> put s { pageZipper = z' } >> return c
+		(c, Just z') -> do
+			put s { pageZipper = z', pageNumber = pageNumber s + 1 }
+			return c
 		(c, Nothing) -> return c
 
 type Slide = NonEmpty Page
@@ -177,13 +179,22 @@ loop m = do
 
 runPage :: Page -> SlideM ()
 runPage p = do
-	t <- asks bodyTurtle
+	bt <- asks bodyTurtle
+	pt <- asks pageTurtle
 	w <- width
 	h <- height
 	c <- asks clock
+	fs <- cvt 12
+	ap <- asks allPages
+	pn <- gets pageNumber
 	liftIO $ do
-		clear t
-		goto t (w / 8) (h / 8)
+		clear pt
+		goto pt (w * 44 / 50) (h * 48 / 50)
+		write pt fontName fs $ show pn
+		forward pt (2 * fs)
+		write pt fontName fs $ "/" ++ show ap
+		clear bt
+		goto bt (w / 8) (h / 8)
 	sequence_ . NE.toList
 		$ NE.intersperse (liftIO (readChan c) >> nextLine) p
 
