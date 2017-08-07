@@ -109,6 +109,11 @@ nextZipper (Zipper b n) = case NE.uncons n of
 	(x, Just n'@(_ :| l)) -> (not $ null l, Just $ Zipper (x : b) n')
 	(_, Nothing) -> (False, Nothing)
 
+nextZipper' :: Zipper a -> Zipper a
+nextZipper' z@(Zipper b n) = case NE.uncons n of
+	(x, Just n) -> Zipper (x : b) n
+	(_, Nothing) -> z
+
 nextPage :: SlideM Bool
 nextPage = do
 	s <- get
@@ -147,7 +152,8 @@ makeStatic st sld = do
 makeState :: Setting -> Slide -> State
 makeState st sld =  State {
 	pageNumber = fromMaybe 1 $ stBeginWith st,
-	pageZipper = nonEmptyToZipper sld,
+	pageZipper = iterate nextZipper' (nonEmptyToZipper sld) !!
+		(fromMaybe 1 (stBeginWith st) - 1),
 	pageEnd = False,
 	allEnd = False,
 	needEnd = 0,
