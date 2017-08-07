@@ -10,4 +10,16 @@ main :: IO ()
 main = runSlide version someSlide
 
 someSlide :: Slide
-someSlide = (writeTitle "hoge" "hige" :| []) :| []
+someSlide = title :| [
+	prelude
+	]
+
+title :: Page
+title = writeTitle "サンプルのスライド" "スライドのシステムをテストする" :| []
+
+prelude :: Page
+prelude = pageTitle "テストのためのスライド" :| [
+	text "これはテストのためのスライドです",
+	text "2行目です",
+	text "3行目ですよ"
+	]

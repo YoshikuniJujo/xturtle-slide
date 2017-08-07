@@ -2,18 +2,20 @@
 
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
-	runSlide, writeTitle, text
+	runSlide, writeTitle, pageTitle, text
 	) where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans (lift, liftIO)
 import Control.Monad.Reader (ReaderT(..), runReaderT, asks)
-import Control.Monad.State (StateT(..), evalStateT, gets)
+import Control.Monad.State (StateT(..), evalStateT, get, gets, put)
 import Control.Concurrent
 import Data.Maybe
 import Data.List
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Function
+import Data.Char
 import System.Environment
 import System.Exit
 import Graphics.X11.Turtle
@@ -96,6 +98,24 @@ data State = State {
 
 data Zipper a = Zipper [a] (NonEmpty a) deriving Show
 
+nonEmptyToZipper :: NonEmpty a -> Zipper a
+nonEmptyToZipper = Zipper []
+
+peekZipper :: Zipper a -> a
+peekZipper (Zipper _ (x :| _)) = x
+
+nextZipper :: Zipper a -> Maybe (Zipper a)
+nextZipper (Zipper b n) = case NE.uncons n of
+	(x, Just n') -> Just $ Zipper (x : b) n'
+	(_, Nothing) -> Nothing
+
+nextPage :: SlideM ()
+nextPage = do
+	s <- get
+	case nextZipper $ pageZipper s of
+		Just z' -> put s { pageZipper = z' }
+		Nothing -> return ()
+
 type Slide = NonEmpty Page
 type Page = NonEmpty Line
 type Line = SlideM ()
@@ -125,7 +145,7 @@ makeStatic st sld = do
 makeState :: Setting -> Slide -> State
 makeState st sld =  State {
 	pageNumber = fromMaybe 1 $ stBeginWith st,
-	pageZipper = Zipper [] sld,
+	pageZipper = nonEmptyToZipper sld,
 	pageEnd = False,
 	allEnd = False,
 	needEnd = 0,
@@ -136,14 +156,40 @@ tstFstLine ((l :| _) :| _) = l
 
 runSlideS :: Slide -> SlideM ()
 runSlideS sld = do
-	tstFstLine sld
 	fld <- asks slideField
+	c <- asks clock
 	liftIO $ do
 		onkeypress fld $ \case
 			'q' -> return False
-			_ -> return True
-		waitField fld
+			' ' -> writeChan c () >> return True
+	runPage =<< gets (peekZipper . pageZipper)
+	liftIO $ readChan c
+	nextPage
+	runPage =<< gets (peekZipper . pageZipper)
+	liftIO $ waitField fld
 
+runPage :: Page -> SlideM ()
+runPage p = do
+	t <- asks bodyTurtle
+	w <- width
+	h <- height
+	c <- asks clock
+	liftIO $ do
+		clear t
+		goto t (w / 8) (h / 8)
+	sequence_ . NE.toList
+		$ NE.intersperse (liftIO (readChan c) >> nextLine) p
+
+nextLine :: SlideM ()
+nextLine = do
+	t <- asks bodyTurtle
+	d <- cvt 24
+	liftIO $ do
+		setheading t (- 90)
+		forward t d
+
+append :: NonEmpty a -> [a] -> NonEmpty a
+append (x :| xs) ys = x :| xs ++ ys
 
 cvt :: Double -> SlideM Double
 cvt x = asks $ (x *) . ratio
@@ -161,12 +207,33 @@ writeTitle ttl sttl = do
 	w <- width
 	h <- height
 	dw <- cvt 20
+	dw' <- cvt 12
 	liftIO $ do
 		hideturtle t
 		speed t "fastest"
-		goto t ((w - dw * fromIntegral (length ttl)) / 2) (h / 2)
+		goto t ((w - dw * myLength ttl) / 2) (h / 2)
 		write t fontName dw ttl
+		goto t ((w - dw' * myLength sttl + 4 * dw') / 2) (h / 2 + dw)
+		write t fontName dw' sttl
 		speed t "slow"
+
+myLength :: String -> Double
+myLength "" = 0
+myLength (c : cs)
+	| isAscii c = 0.7 + myLength cs
+	| otherwise = 1.4 + myLength cs
+
+pageTitle :: String -> Line
+pageTitle ttl = do
+	t <- asks bodyTurtle
+	w <- width
+	fs <- cvt 15
+	liftIO $ do
+		hideturtle t
+		setx t $ w / 8
+		write t fontName fs ttl
+		setheading t (- 90)
+		forward t fs
 
 text :: String -> Line
 text tx = do
@@ -175,10 +242,13 @@ text tx = do
 	rt <- lift $ gets runTurtle
 	fs <- cvt 13
 	liftIO $ do
-		sety t 100
 		setx t $ w / 8
 		setheading t 0
 		write t fontName fs tx
+		showturtle t
+		speed t "slow"
+		forward t $ fs * myLength tx
+		hideturtle t
 
 -- sitext :: Double -> Double -> String -> Line
 -- sitext s i tx st = do
