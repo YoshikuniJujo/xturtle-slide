@@ -104,17 +104,17 @@ nonEmptyToZipper = Zipper []
 peekZipper :: Zipper a -> a
 peekZipper (Zipper _ (x :| _)) = x
 
-nextZipper :: Zipper a -> Maybe (Zipper a)
+nextZipper :: Zipper a -> (Bool, Maybe (Zipper a))
 nextZipper (Zipper b n) = case NE.uncons n of
-	(x, Just n') -> Just $ Zipper (x : b) n'
-	(_, Nothing) -> Nothing
+	(x, Just n'@(_ :| l)) -> (not $ null l, Just $ Zipper (x : b) n')
+	(_, Nothing) -> (False, Nothing)
 
-nextPage :: SlideM ()
+nextPage :: SlideM Bool
 nextPage = do
 	s <- get
 	case nextZipper $ pageZipper s of
-		Just z' -> put s { pageZipper = z' }
-		Nothing -> return ()
+		(c, Just z') -> put s { pageZipper = z' } >> return c
+		(c, Nothing) -> return c
 
 type Slide = NonEmpty Page
 type Page = NonEmpty Line
@@ -163,10 +163,17 @@ runSlideS sld = do
 			'q' -> return False
 			' ' -> writeChan c () >> return True
 	runPage =<< gets (peekZipper . pageZipper)
-	liftIO $ readChan c
-	nextPage
-	runPage =<< gets (peekZipper . pageZipper)
+	loop $ do
+		liftIO $ readChan c
+		cnt <- nextPage
+		runPage =<< gets (peekZipper . pageZipper)
+		return cnt
 	liftIO $ waitField fld
+
+loop :: Monad m => m Bool -> m ()
+loop m = do
+	c <- m
+	when c $ loop m
 
 runPage :: Page -> SlideM ()
 runPage p = do

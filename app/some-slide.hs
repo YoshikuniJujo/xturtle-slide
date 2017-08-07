@@ -11,7 +11,7 @@ main = runSlide version someSlide
 
 someSlide :: Slide
 someSlide = title :| [
-	prelude
+	prelude, body
 	]
 
 title :: Page
@@ -22,4 +22,10 @@ prelude = pageTitle "テストのためのスライド" :| [
 	text "これはテストのためのスライドです",
 	text "2行目です",
 	text "3行目ですよ"
+	]
+
+body :: Page
+body = pageTitle "内容はないよう" :| [
+	text "このスライドには",
+	text "内容はないよう"
 	]
