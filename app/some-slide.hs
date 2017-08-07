@@ -27,5 +27,6 @@ prelude = pageTitle "テストのためのスライド" :| [
 body :: Page
 body = pageTitle "内容はないよう" :| [
 	text "このスライドには",
-	text "内容はないよう"
+	text "内容はないよう",
+	itext 4 "字下げの例だよ"
 	]

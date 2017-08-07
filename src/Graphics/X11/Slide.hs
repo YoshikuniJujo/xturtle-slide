@@ -2,7 +2,7 @@
 
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
-	runSlide, writeTitle, pageTitle, text
+	runSlide, writeTitle, pageTitle, text, itext
 	) where
 
 import Control.Applicative
@@ -260,13 +260,16 @@ pageTitle ttl = do
 		forward t fs
 
 text :: String -> Line
-text tx = do
+text = itext 0
+
+itext :: Double -> String -> Line
+itext i tx = do
 	t <- asks bodyTurtle
 	w <- width
 	rt <- lift $ gets runTurtle
 	fs <- cvt 13
 	liftIO $ do
-		setx t $ w / 8
+		setx t $ w / 8 + i * fs
 		setheading t 0
 		write t fontName fs tx
 		showturtle t
