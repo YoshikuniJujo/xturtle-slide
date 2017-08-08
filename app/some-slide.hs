@@ -20,7 +20,7 @@ title = writeTitle "サンプルのスライド" "スライドのシステムを
 prelude :: Page
 prelude = pageTitle "テストのためのスライド" :| [
 	text "これはテストのためのスライドです",
-	text "2行目です",
+	text "2行目です、つぎ、空行きます" >> nextLine,
 	text "3行目ですよ"
 	]
 

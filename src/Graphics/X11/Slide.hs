@@ -2,7 +2,7 @@
 
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
-	runSlide, writeTitle, pageTitle, text, itext
+	runSlide, writeTitle, pageTitle, text, itext, nextLine
 	) where
 
 import Control.Applicative
