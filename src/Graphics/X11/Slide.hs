@@ -9,7 +9,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans (lift, liftIO)
 import Control.Monad.Reader (ReaderT(..), runReaderT, asks)
-import Control.Monad.State (StateT(..), evalStateT, get, gets, put, modify)
+import Control.Monad.State (StateT(..), evalStateT, get, gets, put)
 import Control.Concurrent
 import Data.Maybe
 import Data.List
@@ -65,7 +65,7 @@ getAction :: ProgramName -> Version -> Option -> Action
 getAction pn v Version =
 	(1, printVersion pn v >> exitSuccess)
 getAction _ _ CountPages =
-	(2, print (NE.length $ 123 :| []) >> exitSuccess)
+	(2, print (NE.length $ (123 :: Int) :| []) >> exitSuccess)
 getAction _ _ (OptRatio r) =
 	(3, return $ initialSetting { stRatio = Just r })
 getAction _ _ (OptPage p) =
@@ -111,7 +111,7 @@ nextZipper (Zipper b n) = case NE.uncons n of
 
 nextZipper' :: Zipper a -> Zipper a
 nextZipper' z@(Zipper b n) = case NE.uncons n of
-	(x, Just n) -> Zipper (x : b) n
+	(x, Just n') -> Zipper (x : b) n'
 	(_, Nothing) -> z
 
 nextPage :: SlideM Bool
@@ -159,17 +159,20 @@ makeState st sld =  State {
 	needEnd = 0,
 	runTurtle = True }
 
+{-
 tstFstLine :: Slide -> Line
 tstFstLine ((l :| _) :| _) = l
+-}
 
 runSlideS :: Slide -> SlideM ()
-runSlideS sld = do
+runSlideS _sld = do
 	fld <- asks slideField
 	c <- asks clock
 	liftIO $ do
 		onkeypress fld $ \case
 			'q' -> return False
 			' ' -> writeChan c () >> return True
+			_ -> return True
 	runPage =<< gets (peekZipper . pageZipper)
 	loop $ do
 		liftIO $ readChan c
@@ -191,14 +194,14 @@ runPage p = do
 	h <- height
 	c <- asks clock
 	fs <- cvt 12
-	ap <- asks allPages
+	apgs <- asks allPages
 	pn <- gets pageNumber
 	liftIO $ do
 		clear pt
 		goto pt (w * 44 / 50) (h * 48 / 50)
 		write pt fontName fs $ show pn
 		forward pt (2 * fs)
-		write pt fontName fs $ "/" ++ show ap
+		write pt fontName fs $ "/" ++ show apgs
 		clear bt
 		goto bt (w / 8) (h / 8)
 	sequence_ . NE.toList
@@ -212,8 +215,10 @@ nextLine = do
 		setheading t (- 90)
 		forward t d
 
+{-
 append :: NonEmpty a -> [a] -> NonEmpty a
 append (x :| xs) ys = x :| xs ++ ys
+-}
 
 cvt :: Double -> SlideM Double
 cvt x = asks $ (x *) . ratio
@@ -266,7 +271,7 @@ itext :: Double -> String -> Line
 itext i tx = do
 	t <- asks bodyTurtle
 	w <- width
-	rt <- lift $ gets runTurtle
+	_rt <- lift $ gets runTurtle
 	fs <- cvt 13
 	liftIO $ do
 		setx t $ w / 8 + i * fs
