@@ -2,7 +2,8 @@
 
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
-	runSlide, writeTitle, pageTitle, text, itext, nextLine
+	runSlide, writeTitle, pageTitle, text, itext, nextLine,
+	foo
 	) where
 
 import Control.Applicative
@@ -22,6 +23,9 @@ import Graphics.X11.Turtle
 import Graphics.X11.Slide.Options
 
 import qualified Data.List.NonEmpty as NE
+
+foo :: Int
+foo = 54321
 
 runSlide :: Version -> Slide -> IO ()
 runSlide v sld = do
