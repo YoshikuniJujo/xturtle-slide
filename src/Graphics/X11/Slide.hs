@@ -3,7 +3,7 @@
 module Graphics.X11.Slide (
 	Version, Slide, Page, Line,
 	runSlide, writeTitle, pageTitle, text, itext, nextLine,
-	foo
+	writeImage
 	) where
 
 import Control.Applicative
@@ -23,9 +23,6 @@ import Graphics.X11.Turtle
 import Graphics.X11.Slide.Options
 
 import qualified Data.List.NonEmpty as NE
-
-foo :: Int
-foo = 54321
 
 runSlide :: Version -> Slide -> IO ()
 runSlide v sld = do
@@ -288,3 +285,17 @@ itext i tx = do
 
 -- sitext :: Double -> Double -> String -> Line
 -- sitext s i tx st = do
+
+writeImage :: Double -> Double -> Double -> Double -> FilePath -> Line
+writeImage x y w h fp = do
+	t <- asks bodyTurtle
+	pw <- width
+	ph <- height
+	w' <- cvt w
+	h' <- cvt h
+	l <- cvt 3
+	liftIO $ do
+		(x0, _) <- position t
+		goto t (x * pw) (y * ph)
+		image t fp w' h'
+		goto t x0 (y * ph + h' + l)

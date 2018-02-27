@@ -11,7 +11,7 @@ main = runSlide version someSlide
 
 someSlide :: Slide
 someSlide = title :| [
-	prelude, body
+	prelude, body, picture
 	]
 
 title :: Page
@@ -29,4 +29,11 @@ body = pageTitle "内容はないよう" :| [
 	text "このスライドには",
 	text "内容はないよう",
 	itext 4 "字下げの例だよ"
+	]
+
+picture :: Page
+picture = pageTitle "画像の例" :| [
+	text "以下に画像の例を、のせます",
+	writeImage 0.2 0.25 180 230 "test-files/cover.png",
+	text "これが画像の例です"
 	]
