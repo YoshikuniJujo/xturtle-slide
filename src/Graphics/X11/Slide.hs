@@ -107,7 +107,7 @@ peekZipper (Zipper _ (x :| _)) = x
 
 nextZipper :: Zipper a -> (Bool, Maybe (Zipper a))
 nextZipper (Zipper b n) = case NE.uncons n of
-	(x, Just n'@(_ :| l)) -> (not $ null l, Just $ Zipper (x : b) n')
+	(x, Just n') -> (True, Just $ Zipper (x : b) n')
 	(_, Nothing) -> (False, Nothing)
 
 nextZipper' :: Zipper a -> Zipper a
@@ -174,11 +174,10 @@ runSlideS _sld = do
 			'q' -> return False
 			' ' -> writeChan c () >> return True
 			_ -> return True
-	runPage =<< gets (peekZipper . pageZipper)
 	loop $ do
+		runPage =<< gets (peekZipper . pageZipper)
 		liftIO $ readChan c
 		cnt <- nextPage
-		runPage =<< gets (peekZipper . pageZipper)
 		return cnt
 	liftIO $ waitField fld
 
@@ -282,9 +281,6 @@ itext i tx = do
 		speed t "slow"
 		forward t $ fs * myLength tx
 		hideturtle t
-
--- sitext :: Double -> Double -> String -> Line
--- sitext s i tx st = do
 
 writeImage :: Double -> Double -> Double -> Double -> FilePath -> Line
 writeImage x y w h fp = do
