@@ -177,6 +177,7 @@ runSlideS _sld = do
 	loop $ do
 		runPage =<< gets (peekZipper . pageZipper)
 		liftIO $ readChan c
+		liftIO $ readChan c
 		cnt <- nextPage
 		return cnt
 	liftIO $ waitField fld
